@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#18202a">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Weekly Study</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f5f7fb;color:#18202a;transition:.2s}
+body.dark{background:#11151b;color:#edf1f7}
+.app{max-width:720px;margin:auto;padding:20px 16px 40px}
+h1{margin:0;font-size:28px}.header{display:flex;align-items:center;justify-content:space-between;gap:12px}.sub{color:#697586;margin:5px 0 20px}
+.theme-btn{width:42px;height:42px;border:0;border-radius:50%;background:#e7ebf2;color:#18202a;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+body.dark .theme-btn{background:#252c36;color:#edf1f7}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px}
+.day{border:0;border-radius:10px;padding:9px 3px;background:#e7ebf2;color:#596579;font-weight:700;font-size:12px}
+.day.active{background:#18202a;color:white}
+.card{background:white;border-radius:16px;padding:18px;margin-bottom:12px;box-shadow:0 3px 14px #0000000b}
+.date{font-size:21px;font-weight:800;margin-bottom:14px}
+.task{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-bottom:1px solid #edf0f4}
+.task:last-child{border-bottom:0}.time{min-width:100px;color:#697586;font-size:13px;font-weight:700}
+.task-content{flex:1}.tag{display:inline-block;font-size:11px;font-weight:800;padding:3px 7px;border-radius:6px;background:#edf1f7;margin-right:6px}
+.done{opacity:.45;text-decoration:line-through}
+.check{width:20px;height:20px;accent-color:#18202a}
+.nav{display:flex;gap:8px;margin:10px 0 12px}
+.nav button,.action{flex:1;border:0;background:white;padding:11px;border-radius:10px;font-weight:700;color:inherit}
+.actions{display:flex;gap:8px;margin-bottom:18px}.action{cursor:pointer}
+.notice{font-size:12px;color:#697586;text-align:center;margin-top:18px}
+.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal.open{display:flex}.modal-box{width:min(460px,100%);background:white;border-radius:18px;padding:20px}
+.modal-box h2{margin-top:0}.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+.field input,.field select{width:100%;padding:11px;border:1px solid #d9dee7;border-radius:10px;font:inherit}
+.modal-buttons{display:flex;gap:8px;margin-top:16px}.modal-buttons button{flex:1;padding:11px;border:0;border-radius:10px;font-weight:700}
+.save{background:#18202a;color:white}.cancel{background:#e7ebf2}
+body.dark .card,body.dark .nav button,body.dark .action,body.dark .modal-box{background:#1b212a;color:#edf1f7}
+body.dark .day{background:#252c36;color:#b8c1ce}body.dark .day.active{background:#edf1f7;color:#18202a}
+body.dark .task{border-color:#303844}body.dark .tag{background:#2a323e}
+body.dark .field input,body.dark .field select{background:#11151b;color:#edf1f7;border-color:#3a4350}
+body.dark .cancel{background:#2a323e;color:#edf1f7}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="header"><h1>Weekly Study</h1><button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle theme">☾</button></div>
+<div class="sub">Your weekly plan — focus on today.</div>
+<div class="actions"><button class="action" onclick="openAdd()">＋ Add Task</button></div>
+<div class="days" id="days"></div>
+<div class="nav"><button onclick="move(-1)">← Previous</button><button onclick="today()">Today</button><button onclick="move(1)">Next →</button></div>
+<div id="content"></div>
+<div class="notice">Tasks, edits, progress and theme are saved on this device.</div>
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h2 id="modalTitle">Add Task</h2>
+    <div class="field"><label>Time</label><input id="taskTime" placeholder="e.g. 6:00–7:00 PM"></div>
+    <div class="field"><label>Task</label><input id="taskName" placeholder="e.g. React Practice"></div>
+    <div class="field"><label>Category</label>
+      <select id="taskCategory">
+        <option>STUDY</option><option>COLLEGE</option><option>FRONT-END</option><option>PROJECT</option><option>ENGLISH</option><option>OTHER</option>
+      </select>
+    </div>
+    <div class="modal-buttons"><button class="cancel" onclick="closeModal()">Cancel</button><button class="save" onclick="saveTask()">Save</button></div>
+  </div>
+</div>
+</div>
+<script>
+const defaultWeek=[
+["Sunday","1:00–3:00 PM","ADB Section","5:00–6:00 PM","ADB Review","6:15–6:45 PM","English"],
+["Monday","10:00–11:30 AM","ADB","12:00–1:00 PM","Data Mining & BI","3:00–4:00 PM","Front-End","4:15–4:45 PM","English"],
+["Tuesday","10:00 AM–12:00 PM","Enterprise Architecture Section","12:00–2:00 PM","Information Systems Section","4:30–5:30 PM","Enterprise Architecture Review","5:45–6:45 PM","Information Systems Review"],
+["Wednesday","9:30–11:00 AM","Core Subject 1","11:30 AM–1:00 PM","Core Subject 2","3:00–4:00 PM","Front-End","4:15–5:15 PM","Graduation Project","7:00–7:30 PM","English"],
+["Thursday","10:00 AM–12:00 PM","Quality Assurance Section","12:00–2:00 PM","Data Mining & BI Section","4:30–5:30 PM","Quality Assurance Review","5:45–6:45 PM","Data Mining & BI Review"],
+["Friday","10:00–11:30 AM","ADB","12:00–1:00 PM","Weakest Subject","3:00–4:00 PM","Front-End / Graduation Project","4:15–4:45 PM","English"],
+["Saturday","10:00–11:30 AM","Weekly Review","12:00–1:00 PM","Graduation Project","3:00–3:30 PM","English"]
+];
+const storageKey="weekly_study_data_v2";
+let week=JSON.parse(localStorage.getItem(storageKey)||"null")||defaultWeek;
+let idx=new Date().getDay();
+let editIndex=null;
+
+function saveData(){localStorage.setItem(storageKey,JSON.stringify(week));}
+function parseTasks(day){let a=[];for(let i=1;i<day.length;i+=2)a.push({time:day[i],name:day[i+1]});return a;}
+function tag(x){if(x.includes("English"))return"ENGLISH";if(x.includes("Front-End"))return"FRONT-END";if(x.includes("Project"))return"PROJECT";if(x.includes("Section"))return"COLLEGE";return"STUDY";}
+function render(){
+ document.getElementById("days").innerHTML=week.map((d,i)=>`<button class="day ${i===idx?'active':''}" onclick="idx=${i};render()">${d[0].slice(0,3).toUpperCase()}</button>`).join("");
+ const tasks=parseTasks(week[idx]);
+ document.getElementById("content").innerHTML=`<div class="card"><div class="date">${week[idx][0]}</div>`+
+ tasks.map((t,n)=>{let id=`done_${idx}_${n}_${t.time}_${t.name}`,checked=localStorage.getItem(id)==="1";
+ return `<div class="task ${checked?'done':''}"><input class="check" type="checkbox" ${checked?'checked':''} onchange="toggleDone('${encodeURIComponent(id)}',this)">
+ <div class="task-content"><div class="time">${t.time}</div><div><span class="tag">${tag(t.name)}</span>${t.name}</div></div>
+ <div style="display:flex;gap:5px">
+ <button class="action" style="flex:0 0 auto;padding:7px 9px" onclick="openEdit(${n})">✎</button>
+ <button class="action" style="flex:0 0 auto;padding:7px 9px" onclick="deleteTask(${n})">🗑</button>
+</div></div>`}).join("")+"</div>";
+}
+function toggleDone(encoded,el){localStorage.setItem(decodeURIComponent(encoded),el.checked?"1":"0");render();}
+function move(n){idx=(idx+n+7)%7;render()}
+function today(){idx=new Date().getDay();render()}
+function toggleTheme(){
+ document.body.classList.toggle("dark");
+ const dark=document.body.classList.contains("dark");
+ localStorage.setItem("dark_mode",dark?"1":"0");
+ document.getElementById("themeBtn").textContent=dark?"☀":"☾";
+}
+function openAdd(){editIndex=null;document.getElementById("modalTitle").textContent="Add Task";document.getElementById("taskTime").value="";document.getElementById("taskName").value="";document.getElementById("taskCategory").value="STUDY";document.getElementById("modal").classList.add("open")}
+function openEdit(n){editIndex=n;let t=parseTasks(week[idx])[n];document.getElementById("modalTitle").textContent="Edit Task";document.getElementById("taskTime").value=t.time;document.getElementById("taskName").value=t.name;document.getElementById("taskCategory").value=tag(t.name);document.getElementById("modal").classList.add("open")}
+function closeModal(){document.getElementById("modal").classList.remove("open")}
+function deleteTask(n){
+ if(!confirm("Delete this task?")) return;
+ let start=1+n*2;
+ week[idx].splice(start,2);
+ saveData(); render();
+}
+function saveTask(){
+ let time=document.getElementById("taskTime").value.trim(),name=document.getElementById("taskName").value.trim(),cat=document.getElementById("taskCategory").value;
+ if(!time||!name)return alert("Please enter both time and task.");
+ let full=name;
+ if(cat!=="STUDY" && !name.toLowerCase().includes(cat.toLowerCase())) full=name;
+ let tasks=parseTasks(week[idx]);
+ if(editIndex===null){week[idx].push(time,full)}else{week[idx][1+editIndex*2]=time;week[idx][2+editIndex*2]=full}
+ saveData();closeModal();render();
+}
+if(localStorage.getItem("dark_mode")==="1"){
+ document.body.classList.add("dark");
+ document.getElementById("themeBtn").textContent="☀";
+}
+render();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "Weekly Study",
+  "short_name": "Study",
+  "description": "Personal weekly study planner",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#18202a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
